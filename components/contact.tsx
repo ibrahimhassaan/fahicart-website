@@ -7,19 +7,60 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { Mail, Phone, MapPin, Loader2, CheckCircle2, XCircle } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export function Contact() {
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     message: "",
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log("Form submitted:", formData)
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "Message Sent! ✓",
+          description: data.message || "We'll get back to you soon. In Sha Allah.",
+          duration: 5000,
+        })
+        // Clear form
+        setFormData({ name: "", email: "", phone: "", message: "" })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Failed to Send",
+          description: data.error || "Please try again or contact us directly.",
+          duration: 5000,
+        })
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Network Error",
+        description: "Please check your connection and try again.",
+        duration: 5000,
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -37,21 +78,36 @@ export function Contact() {
             <Card className="border-border">
               <CardHeader>
                 <CardTitle className="text-2xl">Send us a message</CardTitle>
-                <CardDescription>Fill out the form below and we'll get back to you within 24 hours</CardDescription>
+                <CardDescription>Fill out the form below and we'll get back to you soon. In Sha Allah.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label htmlFor="name" className="text-sm font-medium block mb-2">
-                      Name
-                    </label>
-                    <Input
-                      id="name"
-                      placeholder="Your name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    <div>
+                      <label htmlFor="name" className="text-sm font-medium block mb-2">
+                        Name
+                      </label>
+                      <Input
+                        id="name"
+                        placeholder="Your name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="phone" className="text-sm font-medium block mb-2">
+                        Phone
+                      </label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+960 7960296"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        required
+                      />
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="email" className="text-sm font-medium block mb-2">
@@ -79,8 +135,15 @@ export function Contact() {
                       required
                     />
                   </div>
-                  <Button type="submit" size="lg" className="w-full sm:w-auto">
-                    Send Message
+                  <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      "Send Message"
+                    )}
                   </Button>
                 </form>
               </CardContent>
